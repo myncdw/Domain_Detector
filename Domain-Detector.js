@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         页面内容异常字符检测
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  实时检测页面中超链接和网址中的西里尔字符等异常字符，用框框标记，支持隐藏标记
 // @author       myncdw
 // @match        *://*/*
@@ -66,7 +66,7 @@
             color: '#ff5555'
         },
         {
-            pattern: '[ҀҁғҢңҤҥҦҧҨҩҪҫҬҭҮүҰұҲҳҴҵҶҷҸҹҺһҼҽҾҿ]',
+            pattern: '[ѕҀҁғҢңҤҥҦҧҨҩҪҫҬҭҮүҰұҲҳҴҵҶҷҸҹҺһҼҽҾҿ]',
             desc: '马其顿/巴什基尔字符',
             enabled: true,
             severity: 'high',
@@ -298,15 +298,15 @@
         {
             pattern: '[ıӏӀl]',
             desc: '看起来像"l"的字符（钓鱼风险）',
-            enabled: true,
-            severity: 'high',
+            enabled: false,
+            severity: 'low',
             color: '#ff5555'
         },
         {
             pattern: '[οοО0Ｏ]',
             desc: '看起来像"o"和"0"的字符',
-            enabled: true,
-            severity: 'high',
+            enabled: false,
+            severity: 'low',
             color: '#ff5555'
         },
         {
@@ -329,6 +329,14 @@
             enabled: true,
             severity: 'high',
             color: '#ff5555'
+        },
+        // ===== xn--开头的 =====
+        {
+            pattern: '[xn--]',
+            desc: 'IDN（国际化域名）',
+            enabled: true,
+            severity: 'medium',
+            color: '#ffaa44'
         }
     ];
 
