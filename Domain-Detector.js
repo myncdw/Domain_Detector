@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         页面内容异常字符检测
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  实时检测页面中超链接和网址中的西里尔字符等异常字符，用框框标记，支持隐藏标记
 // @author       myncdw
 // @match        *://*/*
@@ -43,157 +43,72 @@
 
     // 默认的异常字符规则（扩展版）
     const DEFAULT_CHAR_RULES = [
-        // ===== 西里尔字符系列 =====
-        {
-            pattern: '[а-яА-ЯёЁ]',
-            desc: '西里尔字符（俄语）',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[ѐ-ӿ]',
-            desc: '西里尔字符扩展（乌克兰、塞尔维亚等）',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[Ѐ-ӿ]',
-            desc: '西里尔大写扩展',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[ѕҀҁғҢңҤҥҦҧҨҩҪҫҬҭҮүҰұҲҳҴҵҶҷҸҹҺһҼҽҾҿ]',
-            desc: '马其顿/巴什基尔字符',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[Ҁҁғғғғҝҝҟҟҡҡңңҥҥҧҧҩҩҫҫҭҭүүұұҳҳҵҵҷҷҹҹһһҽҽҿҿ]',
-            desc: '西里尔字母小写扩展',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
 
-        // ===== 希腊字符系列 =====
+        /* =========================
+           🔴 HIGH RISK（高风险：钓鱼 / IDN / 混淆核心）
+           ========================= */
+        
         {
-            pattern: '[α-ωΑ-Ω]',
-            desc: '希腊字符（基础）',
+            pattern: 'xn--',
+            desc: 'Punycode 国际化域名 (IDN)',
             enabled: true,
             severity: 'high',
-            color: '#ffaa44'
+            color: '#ff2d2d'
         },
+        
         {
-            pattern: '[ά-ώΆ-Ώ]',
-            desc: '希腊字符（重音符号）',
+            pattern: '[\u0400-\u04FF]',
+            desc: '西里尔字符（Cyrillic，全量）',
             enabled: true,
             severity: 'high',
-            color: '#ffaa44'
+            color: '#ff3b3b'
         },
+        
         {
-            pattern: '[ϐ-ϑϒ-ϓϔϕ-ϖϗ-ϛϜ-ϝϞ-ϟϠ-ϡϢ-ϣϤ-ϥϦ-ϧϨ-ϩϪ-ϫϬ-ϭϮϯ]',
-            desc: '希腊字符扩展变体',
+            pattern: '[\u0370-\u03FF]',
+            desc: '希腊字符（Greek，全量）',
             enabled: true,
             severity: 'high',
-            color: '#ffaa44'
+            color: '#ff8844'
         },
-
-        // ===== 亚美尼亚、格鲁吉亚等 =====
+        
         {
-            pattern: '[Ա-ևᴀ-ჿ]',
+            pattern: '[\u0530-\u058F]',
             desc: '亚美尼亚字符',
             enabled: true,
-            severity: 'medium',
+            severity: 'high',
             color: '#ff8844'
         },
+        
         {
-            pattern: '[ა-ჺჽ-ჾჿ]',
-            desc: '格鲁吉亚字符',
+            pattern: '[\u0530-\u058F\u0400-\u04FF\u0370-\u03FF]',
+            desc: '混合非拉丁脚本（高风险域名检测）',
             enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
+            severity: 'high',
+            color: '#ff5555'
         },
-
-        // ===== 希伯来、阿拉伯字符 =====
+        
+        
+        /* =========================
+           🟠 MEDIUM RISK（中风险：非拉丁脚本）
+           ========================= */
+        
         {
-            pattern: '[א-ת]',
-            desc: '希伯来字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[ء-ي]',
+            pattern: '[\u0600-\u06FF]',
             desc: '阿拉伯字符（基础）',
             enabled: true,
             severity: 'medium',
-            color: '#ff8844'
+            color: '#ffaa44'
         },
+        
         {
-            pattern: '[ٰ-ٿ]',
-            desc: '阿拉伯字符（扩展）',
+            pattern: '[\u0750-\u077F]',
+            desc: '阿拉伯字符扩展',
             enabled: true,
             severity: 'medium',
-            color: '#ff8844'
+            color: '#ffaa44'
         },
-        {
-            pattern: '[ۀ-ے]',
-            desc: '阿拉伯字符（波斯体）',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-
-        // ===== 梵文、印地文及南亚字符 =====
-        {
-            pattern: '[ऀ-ः]',
-            desc: '梵文字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[अ-ह]',
-            desc: '印地文字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[०-९]',
-            desc: '梵文数字',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[ଅ-ୋ]',
-            desc: '奥里亚字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[ஃ-ஊ]',
-            desc: '泰米尔字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-        {
-            pattern: '[ಅ-ಋ]',
-            desc: '卡纳达字符',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-
-        // ===== 泰文、老挝、柬埔寨 =====
+        
         {
             pattern: '[\u0E00-\u0E7F]',
             desc: '泰文字符',
@@ -201,13 +116,15 @@
             severity: 'medium',
             color: '#ffaa44'
         },
+        
         {
-            pattern: '[\u0E80-\u0EDF]',
+            pattern: '[\u0E80-\u0EFF]',
             desc: '老挝字符',
             enabled: true,
             severity: 'medium',
             color: '#ffaa44'
         },
+        
         {
             pattern: '[\u1780-\u17FF]',
             desc: '高棉字符',
@@ -215,47 +132,23 @@
             severity: 'medium',
             color: '#ffaa44'
         },
-
-        // ===== 格鲁吉亚、格拉哥里字符 =====
-        {
-            pattern: '[\u0487-\u052F]',
-            desc: '格拉哥里和西里尔字符',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-
-        // ===== 其他欧洲和东欧字符 =====
-        {
-            pattern: '[ăąćĉċčďđĕėęěĝğġģĥħĩīĭįıĵķĸĹĻľŀłńņňŉŋŔŕŖŗŘřŚŜŞŠţŤŦũūŭůűųŵŷźżž]',
-            desc: '扩展拉丁字符（中欧语言）',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
-
-        // ===== 越南、缅甸、孟加拉字符 =====
+        
         {
             pattern: '[\u0980-\u09FF]',
             desc: '孟加拉字符',
             enabled: true,
             severity: 'medium',
-            color: '#ff8844'
+            color: '#ffaa44'
         },
+        
         {
-            pattern: '[\u0A00-\u0A7F]',
-            desc: '古吉拉特字符',
+            pattern: '[\u0900-\u097F]',
+            desc: '天城文（印地语等）',
             enabled: true,
             severity: 'medium',
-            color: '#ff8844'
+            color: '#ffaa44'
         },
-        {
-            pattern: '[\u0B00-\u0B7F]',
-            desc: '奥里亚字符扩展',
-            enabled: true,
-            severity: 'medium',
-            color: '#ff8844'
-        },
+        
         {
             pattern: '[\u1000-\u109F]',
             desc: '缅甸字符',
@@ -263,82 +156,135 @@
             severity: 'medium',
             color: '#ffaa44'
         },
-
-        // ===== 东亚字符（默认禁用）=====
+        
         {
-            pattern: '[一-龥]',
+            pattern: '[\u0A80-\u0AFF]',
+            desc: '古吉拉特字符',
+            enabled: true,
+            severity: 'medium',
+            color: '#ffaa44'
+        },
+        
+        
+        /* =========================
+           🟡 HOMOGLYPH（同形异义：核心钓鱼检测）
+           ========================= */
+        
+        {
+            pattern: '[оοоＯ]',
+            desc: 'O / 0 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[аɑαàáâäãå]',
+            desc: 'A 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[еε]',
+            desc: 'E 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[сϲ]',
+            desc: 'C 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[рρ]',
+            desc: 'P 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[хχ]',
+            desc: 'X 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        {
+            pattern: '[ӏı]',
+            desc: 'L / I 混淆字符',
+            enabled: true,
+            severity: 'high',
+            color: '#ff5555'
+        },
+        
+        
+        /* =========================
+           🔵 LOW RISK（低风险：语言字符，仅提示）
+           ========================= */
+        
+        {
+            pattern: '[\u4E00-\u9FFF]',
             desc: '汉字',
             enabled: false,
             severity: 'low',
             color: '#88ccff'
         },
+        
         {
-            pattern: '[ぁ-ん]',
+            pattern: '[\u3040-\u309F]',
             desc: '日文平假名',
             enabled: false,
             severity: 'low',
             color: '#88ccff'
         },
+        
         {
-            pattern: '[ァ-ヴー]',
+            pattern: '[\u30A0-\u30FF]',
             desc: '日文片假名',
             enabled: false,
             severity: 'low',
             color: '#88ccff'
         },
+        
         {
-            pattern: '[가-힣]',
+            pattern: '[\uAC00-\uD7AF]',
             desc: '韩文',
             enabled: false,
             severity: 'low',
             color: '#88ccff'
         },
-
-        // ===== 看起来相似的字符组合 =====
+        
+        
+        /* =========================
+           ⚙️ SPECIAL / META（结构性检测）
+           ========================= */
+        
         {
-            pattern: '[ıӏӀl]',
-            desc: '看起来像"l"的字符（钓鱼风险）',
+            pattern: '\\bxn--',
+            desc: 'IDN Punycode 域名前缀检测',
+            enabled: true,
+            severity: 'high',
+            color: '#ff2d2d'
+        },
+        
+        {
+            pattern: '[^\x00-\x7F]',
+            desc: '非 ASCII 字符兜底检测',
             enabled: false,
-            severity: 'low',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[οοО0Ｏ]',
-            desc: '看起来像"o"和"0"的字符',
-            enabled: false,
-            severity: 'low',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[рр]',
-            desc: '西里尔字符"р"（看起来像拉丁"p"）',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[ехх]',
-            desc: '西里尔字符"х"（看起来像拉丁"x"）',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        {
-            pattern: '[ссс]',
-            desc: '西里尔字符"с"（看起来像拉丁"c"）',
-            enabled: true,
-            severity: 'high',
-            color: '#ff5555'
-        },
-        // ===== xn--开头的 =====
-        {
-            pattern: '[xn--]',
-            desc: 'IDN（国际化域名）',
-            enabled: true,
             severity: 'medium',
-            color: '#ffaa44'
+            color: '#66ccff'
         }
-    ];
+        
+        ];
 
     /* ===================== 规则管理 ===================== */
 
