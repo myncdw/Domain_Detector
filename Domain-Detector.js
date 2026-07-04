@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         页面内容异常字符检测
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  实时检测页面中超链接和网址中的西里尔字符等异常字符，用框框标记，支持隐藏标记
 // @author       myncdw
 // @match        *://*/*
@@ -20,6 +20,7 @@
     const RULES_KEY = 'char_detection_rules';
     const ENABLED_KEY = 'char_detection_enabled';
     const MARKS_VISIBLE_KEY = 'char_marks_visible';
+    const NOTIFICATION_MODE_KEY = 'char_detection_notification_mode';
     const MARK_CLASS = 'char-detection-mark';
 
     // 常见顶级域名列表
@@ -314,6 +315,16 @@
         updateMarksVisibility(value);
     }
 
+    function getNotificationMode() {
+        return GM_getValue(NOTIFICATION_MODE_KEY, 'popup');
+    }
+
+    function setNotificationMode(value) {
+        if (['popup', 'console', 'none'].includes(value)) {
+            GM_setValue(NOTIFICATION_MODE_KEY, value);
+        }
+    }
+
     /* ===================== 样式注入 ===================== */
 
     GM_addStyle(`
@@ -550,6 +561,28 @@
     /* ===================== 显示找到的异常字符统计 ===================== */
 
     function showDetectionAlert(statistics) {
+        const notificationMode = getNotificationMode();
+
+        // 如果通知方式是 'none'，则不显示任何通知
+        if (notificationMode === 'none') {
+            return;
+        }
+
+        // 构建消息内容
+        const messageLines = ['⚠️ 检测到异常字符已标记'];
+        statistics.forEach(stat => {
+            messageLines.push(`  [${stat.desc}] 发现 ${stat.count} 个链接/网址`);
+        });
+        const fullMessage = messageLines.join('\n');
+
+        // 根据通知方式输出
+        if (notificationMode === 'console') {
+            console.warn(fullMessage);
+            console.table(statistics);
+            return;
+        }
+
+        // notificationMode === 'popup' 时显示弹窗
         const alertId = 'char-detection-alert-' + Date.now();
 
         const container = document.createElement('div');
@@ -812,6 +845,20 @@
                     </p>
                 </div>
 
+                <div style="background: #1a1a1a; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-weight: 600;">📢 通知方式</span>
+                        <select id="notificationMode" style="padding: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; border-radius: 4px; font-size: 13px;">
+                            <option value="popup">💬 弹窗（右上角弹窗）</option>
+                            <option value="console">🖥️ 控制台（仅console输出）</option>
+                            <option value="none">🔇 不通知</option>
+                        </select>
+                    </label>
+                    <p style="font-size: 12px; color: #aaa; margin: 10px 0 0 0;">
+                        选择检测到异常字符时的通知方式。
+                    </p>
+                </div>
+
                 <h3>🔍 检测规则</h3>
                 <div id="rulesContainer"></div>
                 <button id="addRule" style="margin-top: 10px; padding: 8px 16px; background: #2196f3; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">
@@ -844,6 +891,13 @@
         toggle.checked = getDetectionEnabled();
         toggle.onchange = (e) => {
             setDetectionEnabled(e.target.checked);
+        };
+
+        // 通知方式选择
+        const notificationModeSelect = panel.querySelector('#notificationMode');
+        notificationModeSelect.value = getNotificationMode();
+        notificationModeSelect.onchange = (e) => {
+            setNotificationMode(e.target.value);
         };
 
         // 渲染规则列表
